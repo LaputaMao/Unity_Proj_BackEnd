@@ -1,0 +1,7 @@
+mysql:
+  host: "127.0.0.1"
+  port: 3306
+  user: "root"         # 换成你的数据库用户名
+  password: "123456" # 换成你的数据库密码
+  dbname: "unity_li" # 换成你的数据库名
+  charset: "utf8mb4"
