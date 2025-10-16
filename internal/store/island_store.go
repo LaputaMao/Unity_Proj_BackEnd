@@ -44,7 +44,8 @@ func (s *IslandStore) Update(island *model.Island) error {
 	return s.db.Save(island).Error
 }
 
-// Delete 根据 ID 删除一个岛屿
+// Delete 根据 ID 删除一个岛屿 (硬删除)
 func (s *IslandStore) Delete(id uint) error {
-	return s.db.Delete(&model.Island{}, id).Error
+	// 在 Delete 前调用 Unscoped()来实现硬删除
+	return s.db.Unscoped().Delete(&model.Island{}, id).Error
 }

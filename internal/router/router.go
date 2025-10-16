@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(engine *gin.Engine, islandHandler *handler.IslandHandler) {
+func Setup(engine *gin.Engine, islandHandler *handler.IslandHandler, dataFileHandler *handler.DataFileHandler) {
 	// 设置静态文件服务，用于访问上传的图片
 	// 前端访问 http://localhost:8080/uploads/xxx.jpg 就会映射到 ./uploads/xxx.jpg 文件
 	engine.Static("/uploads", "./uploads")
@@ -24,6 +24,19 @@ func Setup(engine *gin.Engine, islandHandler *handler.IslandHandler) {
 			islandGroup.DELETE("/:id", islandHandler.DeleteIsland)
 			// PUT /api/v1/islands/:id - 更新岛屿信息
 			islandGroup.PUT("/:id", islandHandler.UpdateIsland)
+		}
+
+		// 数据相关的路由
+		dataFileGroup := apiV1.Group("/data-files")
+		{
+			// POST /api/v1/data-files - 上传文件
+			dataFileGroup.POST("", dataFileHandler.UploadDataFile)
+			// GET /api/v1/data-files/isle/:isle_id - 获取某个岛屿的文件列表（分页）
+			dataFileGroup.GET("/isle/:isle_id", dataFileHandler.GetDataFilesByIsle)
+			// DELETE /api/v1/data-files/:id - 删除文件
+			dataFileGroup.DELETE("/:id", dataFileHandler.DeleteDataFile)
+			// PUT /api/v1/data-files/:id/height - 修改文件高度
+			dataFileGroup.PUT("/:id/height", dataFileHandler.UpdateDataFileHeight)
 		}
 	}
 }

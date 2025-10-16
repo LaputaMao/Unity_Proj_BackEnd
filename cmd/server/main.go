@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// 3. 自动迁移 (创建/更新表结构)
-	err = db.AutoMigrate(&model.Island{})
+	err = db.AutoMigrate(&model.Island{}, &model.DataFile{})
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %s", err)
 	}
@@ -46,12 +46,16 @@ func main() {
 	// 4. 依赖注入：创建 store 和 handler
 	islandStore := store.NewIslandStore(db)
 	islandHandler := handler.NewIslandHandler(islandStore)
+	dataFileStore := store.NewDataFileStore(db)
+	dataFileHandler := handler.NewDataFileHandler(dataFileStore, islandStore) // 注意这里需要传入两个 store
 
 	// 5. 初始化 Gin 引擎
 	r := gin.Default()
+	// 增加 Body 大小限制，防止上传大文件时出错 (例如，限制为 1GB)
+	r.MaxMultipartMemory = 1 << 30 // 1 GB
 
 	// 6. 设置路由
-	router.Setup(r, islandHandler)
+	router.Setup(r, islandHandler, dataFileHandler)
 
 	// 7. 启动服务器
 	// All the Go project developed by LaputaMao will listen on port 9090 , just because 9090 like 'gogo' hhh.
