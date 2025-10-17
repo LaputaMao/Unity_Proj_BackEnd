@@ -55,3 +55,10 @@ func (s *DataFileStore) UpdateHeight(id uint, height float64) error {
 func (s *DataFileStore) Delete(id uint) error {
 	return s.db.Unscoped().Delete(&model.DataFile{}, id).Error
 }
+
+// GetAllByIsleID 查询某个岛屿下的所有文件（不分页）
+func (s *DataFileStore) GetAllByIsleID(isleID uint) ([]model.DataFile, error) {
+	var files []model.DataFile
+	err := s.db.Where("isle_id = ?", isleID).Find(&files).Error
+	return files, err
+}

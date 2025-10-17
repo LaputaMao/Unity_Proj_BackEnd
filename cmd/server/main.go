@@ -48,14 +48,14 @@ func main() {
 	islandHandler := handler.NewIslandHandler(islandStore)
 	dataFileStore := store.NewDataFileStore(db)
 	dataFileHandler := handler.NewDataFileHandler(dataFileStore, islandStore) // 注意这里需要传入两个 store
-
+	exportHandler := handler.NewExportHandler(islandStore, dataFileStore)
 	// 5. 初始化 Gin 引擎
 	r := gin.Default()
-	// 增加 Body 大小限制，防止上传大文件时出错 (例如，限制为 1GB)
-	r.MaxMultipartMemory = 1 << 30 // 1 GB
+	// 增加 Body 大小限制，防止上传大文件时出错
+	r.MaxMultipartMemory = 2 << 30 // 2 GB
 
 	// 6. 设置路由
-	router.Setup(r, islandHandler, dataFileHandler)
+	router.Setup(r, islandHandler, dataFileHandler, exportHandler)
 
 	// 7. 启动服务器
 	// All the Go project developed by LaputaMao will listen on port 9090 , just because 9090 like 'gogo' hhh.
