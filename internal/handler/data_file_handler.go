@@ -94,8 +94,10 @@ func (h *DataFileHandler) UploadDataFile(c *gin.Context) {
 	}
 
 	// --- 4. 创建数据库记录 ---
+	// 首先获取纯数据名
+	cleanDataName := strings.TrimSuffix(file.Filename, filepath.Ext(file.Filename))
 	dataFile := model.DataFile{
-		DataName: file.Filename,
+		DataName: cleanDataName,
 		DataType: dataType,
 		DataPath: finalFilePath,
 		IsleID:   uint(isleID),
