@@ -2,6 +2,7 @@ package handler
 
 import (
 	"Go_for_unity/internal/store"
+	"Go_for_unity/internal/ws"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -57,12 +58,13 @@ type ExportedJSON struct {
 
 // ExportHandler 负责处理导出逻辑
 type ExportHandler struct {
-	isStore *store.IslandStore
-	dfStore *store.DataFileStore
+	isStore   *store.IslandStore
+	dfStore   *store.DataFileStore
+	wsManager *ws.Manager
 }
 
-func NewExportHandler(isStore *store.IslandStore, dfStore *store.DataFileStore) *ExportHandler {
-	return &ExportHandler{isStore: isStore, dfStore: dfStore}
+func NewExportHandler(isStore *store.IslandStore, dfStore *store.DataFileStore, wsManager *ws.Manager) *ExportHandler {
+	return &ExportHandler{isStore: isStore, dfStore: dfStore, wsManager: wsManager}
 }
 
 // ExportIslandJSON 是导出接口的核心实现
@@ -144,5 +146,11 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 	}
 
 	// 6. 返回 JSON 响应
+	//c.JSON(http.StatusOK, result)
+
+	// 6. 通过 WebSocket 推送给 Unity
+	h.wsManager.SendMessage(result)
+
+	// 7. 返回 HTTP 响应给前端
 	c.JSON(http.StatusOK, result)
 }

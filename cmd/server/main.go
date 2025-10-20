@@ -5,6 +5,7 @@ import (
 	"Go_for_unity/internal/model"
 	"Go_for_unity/internal/router"
 	"Go_for_unity/internal/store"
+	"Go_for_unity/internal/ws"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -47,15 +48,17 @@ func main() {
 	islandStore := store.NewIslandStore(db)
 	islandHandler := handler.NewIslandHandler(islandStore)
 	dataFileStore := store.NewDataFileStore(db)
+	wsManager := ws.NewManager()                                              // 创建 WebSocket 管理器
 	dataFileHandler := handler.NewDataFileHandler(dataFileStore, islandStore) // 注意这里需要传入两个 store
-	exportHandler := handler.NewExportHandler(islandStore, dataFileStore)
+	exportHandler := handler.NewExportHandler(islandStore, dataFileStore, wsManager)
+	wsHandler := handler.NewWebsocketHandler(wsManager) // 创建 WebSocket 处理器
 	// 5. 初始化 Gin 引擎
 	r := gin.Default()
 	// 增加 Body 大小限制，防止上传大文件时出错
 	r.MaxMultipartMemory = 2 << 30 // 2 GB
 
 	// 6. 设置路由
-	router.Setup(r, islandHandler, dataFileHandler, exportHandler)
+	router.Setup(r, islandHandler, dataFileHandler, exportHandler, wsHandler)
 
 	// 7. 启动服务器
 	// All the Go project developed by LaputaMao will listen on port 9090 , just because 9090 like 'gogo' hhh.
