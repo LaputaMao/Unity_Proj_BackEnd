@@ -21,10 +21,34 @@ func (s *IslandStore) Create(island *model.Island) error {
 }
 
 // GetByOwner 根据用户名查询所有岛屿
-func (s *IslandStore) GetByOwner(owner string) ([]model.Island, error) {
+// 新增参数: isleName (用于模糊搜索), page, pageSize
+// 返回值: 岛屿列表, 总记录数, 错误
+func (s *IslandStore) GetByOwner(owner, isleName string, page, pageSize int) ([]model.Island, int64, error) {
 	var islands []model.Island
-	err := s.db.Where("belong_to = ?", owner).Find(&islands).Error
-	return islands, err
+	var total int64
+
+	// 1. 构建基础查询，这是 GORM 中处理动态查询的最佳方式
+	query := s.db.Model(&model.Island{}).Where("belong_to = ?", owner)
+
+	// 2. 如果 isle_name 不为空，则添加模糊查询条件
+	if isleName != "" {
+		query = query.Where("isle_name LIKE ?", "%"+isleName+"%")
+	}
+
+	// 3. 先执行 Count() 获取满足条件的总记录数，用于分页
+	// 注意：Count() 需要在 Limit() 和 Offset() 之前执行
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 4. 添加分页和排序条件，然后执行查询获取数据
+	err = query.Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Order("created_at desc"). // 按创建时间降序排序
+		Find(&islands).Error
+
+	return islands, total, err
 }
 
 // GetByID 根据 ID 查询单个岛屿

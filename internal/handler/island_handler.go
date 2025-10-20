@@ -78,25 +78,44 @@ func (h *IslandHandler) CreateIsland(c *gin.Context) {
 
 // GetIslandsByOwner 2. 获取用户的所有岛屿信息接口
 func (h *IslandHandler) GetIslandsByOwner(c *gin.Context) {
+	// --- 解析参数 ---
+	// 必选参数
 	owner := c.Query("belong_to")
 	if owner == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "必须提供 belong_to 参数"})
 		return
 	}
 
-	islands, err := h.store.GetByOwner(owner)
+	// 可选参数
+	isleName := c.Query("isle_name")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	// --- 调用 Store 层 ---
+	islands, total, err := h.store.GetByOwner(owner, isleName, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询数据库失败: " + err.Error()})
 		return
 	}
 
-	// 这里我们不返回文件流，而是返回一个可供前端访问的 URL
-	// 这样更符合 RESTful API 的设计
+	// --- 处理返回数据 ---
+	// 将图片路径转换为可访问的 URL (这部分逻辑不变)
 	for i := range islands {
-		islands[i].IslePicPath = fmt.Sprintf("http://%s/%s", c.Request.Host, islands[i].IslePicPath)
+		// 这里我们做一个健壮性检查，防止 IslePicPath 为空
+		if islands[i].IslePicPath != "" {
+			islands[i].IslePicPath = fmt.Sprintf("http://%s/%s", c.Request.Host, islands[i].IslePicPath)
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": islands})
+	// --- 返回新的 JSON 结构 ---
+	c.JSON(http.StatusOK, gin.H{
+		"data": islands,
+		"pagination": gin.H{
+			"total":    total,
+			"page":     page,
+			"pageSize": pageSize,
+		},
+	})
 }
 
 // DeleteIsland 3. 删除岛屿接口
