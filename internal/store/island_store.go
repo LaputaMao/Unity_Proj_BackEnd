@@ -23,16 +23,26 @@ func (s *IslandStore) Create(island *model.Island) error {
 // GetByOwner 根据用户名查询所有岛屿
 // 新增参数: isleName (用于模糊搜索), page, pageSize
 // 返回值: 岛屿列表, 总记录数, 错误
-func (s *IslandStore) GetByOwner(owner, isleName string, page, pageSize int) ([]model.Island, int64, error) {
+func (s *IslandStore) GetByOwner(owner, isleName, archipelagoName, country string, page, pageSize int) ([]model.Island, int64, error) {
 	var islands []model.Island
 	var total int64
 
 	// 1. 构建基础查询，这是 GORM 中处理动态查询的最佳方式
 	query := s.db.Model(&model.Island{}).Where("belong_to = ?", owner)
 
-	// 2. 如果 isle_name 不为空，则添加模糊查询条件
+	// 2. 动态添加可选的查询条件
+	//如果这两个参数不为空，就往 query 中追加 Where 条件。
+	//GORM 会智能地将这些 Where 条件用 AND 连接起来，完美地实现了我们的组合查询需求。
 	if isleName != "" {
 		query = query.Where("isle_name LIKE ?", "%"+isleName+"%")
+	}
+	if archipelagoName != "" {
+		// 精确匹配群岛名称
+		query = query.Where("archipelago_name = ?", archipelagoName)
+	}
+	if country != "" {
+		// 精确匹配国家
+		query = query.Where("country = ?", country)
 	}
 
 	// 3. 先执行 Count() 获取满足条件的总记录数，用于分页

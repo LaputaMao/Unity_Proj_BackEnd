@@ -32,6 +32,8 @@ func (h *IslandHandler) CreateIsland(c *gin.Context) {
 	cameraX, _ := strconv.ParseFloat(c.PostForm("camera_x"), 64)
 	cameraY, _ := strconv.ParseFloat(c.PostForm("camera_y"), 64)
 	cameraZ, _ := strconv.ParseFloat(c.PostForm("camera_z"), 64)
+	archipelagoName := c.PostForm("archipelago_name")
+	country := c.PostForm("country")
 
 	// 处理文件上传
 	file, err := c.FormFile("isle_pic")
@@ -56,15 +58,17 @@ func (h *IslandHandler) CreateIsland(c *gin.Context) {
 
 	// 创建 Island 对象
 	island := model.Island{
-		IsleName:    isleName,
-		IsleDesc:    isleDesc,
-		BelongTo:    belongTo,
-		CenterX:     centerX,
-		CenterY:     centerY,
-		CameraX:     cameraX,
-		CameraY:     cameraY,
-		CameraZ:     cameraZ,
-		IslePicPath: picPath, // 存储相对路径
+		IsleName:        isleName,
+		IsleDesc:        isleDesc,
+		BelongTo:        belongTo,
+		CenterX:         centerX,
+		CenterY:         centerY,
+		CameraX:         cameraX,
+		CameraY:         cameraY,
+		CameraZ:         cameraZ,
+		IslePicPath:     picPath, // 存储相对路径
+		ArchipelagoName: archipelagoName,
+		Country:         country,
 	}
 
 	// 保存到数据库
@@ -90,9 +94,11 @@ func (h *IslandHandler) GetIslandsByOwner(c *gin.Context) {
 	isleName := c.Query("isle_name")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	archipelagoName := c.Query("archipelago_name")
+	country := c.Query("country")
 
 	// --- 调用 Store 层 ---
-	islands, total, err := h.store.GetByOwner(owner, isleName, page, pageSize)
+	islands, total, err := h.store.GetByOwner(owner, isleName, archipelagoName, country, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询数据库失败: " + err.Error()})
 		return
@@ -170,12 +176,14 @@ func (h *IslandHandler) UpdateIsland(c *gin.Context) {
 
 	// 绑定 JSON 数据到临时结构体
 	var updateData struct {
-		IsleDesc *string  `json:"isle_desc"`
-		CenterX  *float64 `json:"center_x"`
-		CenterY  *float64 `json:"center_y"`
-		CameraX  *float64 `json:"camera_x"`
-		CameraY  *float64 `json:"camera_y"`
-		CameraZ  *float64 `json:"camera_z"`
+		IsleDesc        *string  `json:"isle_desc"`
+		CenterX         *float64 `json:"center_x"`
+		CenterY         *float64 `json:"center_y"`
+		CameraX         *float64 `json:"camera_x"`
+		CameraY         *float64 `json:"camera_y"`
+		CameraZ         *float64 `json:"camera_z"`
+		ArchipelagoName *string  `json:"archipelago_name"`
+		Country         *string  `json:"country"`
 	}
 
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -202,6 +210,12 @@ func (h *IslandHandler) UpdateIsland(c *gin.Context) {
 	}
 	if updateData.CameraZ != nil {
 		island.CameraZ = *updateData.CameraZ
+	}
+	if updateData.ArchipelagoName != nil {
+		island.ArchipelagoName = *updateData.ArchipelagoName
+	}
+	if updateData.Country != nil {
+		island.Country = *updateData.Country
 	}
 
 	// 保存回数据库
