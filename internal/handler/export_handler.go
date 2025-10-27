@@ -54,6 +54,8 @@ type ExportedJSON struct {
 	Models       []FileEntry   `json:"models"`
 	Pictures     []FileEntry   `json:"pictures"`
 	Text         []FileEntry   `json:"text"`
+	Weather      []FileEntry   `json:"weather"`
+	Mapping      []FileEntry   `json:"mapping"`
 }
 
 // ExportHandler 负责处理导出逻辑
@@ -109,6 +111,8 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 		Models:   []FileEntry{},
 		Pictures: []FileEntry{},
 		Text:     []FileEntry{},
+		Weather:  []FileEntry{},
+		Mapping:  []FileEntry{},
 	}
 
 	// 5. 遍历文件，分类填充到 result 中
@@ -141,6 +145,16 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 			result.Text = append(result.Text, FileEntry{
 				Name: file.DataName,
 				Path: file.DataPath, // 直接使用数据库中的路径
+			})
+		case "weather":
+			result.Weather = append(result.Weather, FileEntry{
+				Name: file.DataName,
+				Path: file.DataPath, // 按要求使用相对路径
+			})
+		case "mapping":
+			result.Mapping = append(result.Mapping, FileEntry{
+				Name: file.DataName,
+				Path: file.DataPath, // 按要求使用相对路径
 			})
 		}
 	}

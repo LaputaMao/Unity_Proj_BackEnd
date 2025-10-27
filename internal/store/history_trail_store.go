@@ -19,18 +19,23 @@ func (s *HistoryTrailStore) Create(trail *model.HistoryTrail) error {
 }
 
 // GetByIsleName 分页查询指定岛屿的所有历史轨迹
-func (s *HistoryTrailStore) GetByIsleName(isleName string, page, pageSize int) ([]model.HistoryTrail, int64, error) {
+func (s *HistoryTrailStore) GetByIsleName(isleName, category string, page, pageSize int) ([]model.HistoryTrail, int64, error) {
 	var trails []model.HistoryTrail
 	var total int64
 
-	// 先计算总数
-	s.db.Model(&model.HistoryTrail{}).Where("isle_name = ?", isleName).Count(&total)
+	// 构建查询，同时根据 isle_name 和 category 筛选
+	query := s.db.Model(&model.HistoryTrail{}).Where("isle_name = ? AND category = ?", isleName, category)
 
-	// 再进行分页查询
-	err := s.db.Where("isle_name = ?", isleName).
-		Offset((page - 1) * pageSize).
+	// 计算总数
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	err = query.Offset((page - 1) * pageSize).
 		Limit(pageSize).
-		Order("created_at desc"). // 按创建时间降序排序，最新的在前面
+		Order("created_at desc").
 		Find(&trails).Error
 
 	return trails, total, err

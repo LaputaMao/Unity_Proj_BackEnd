@@ -79,7 +79,7 @@ func (h *DataFileHandler) UploadDataFile(c *gin.Context) {
 		}
 		finalFilePath = foundPath
 
-	case "models", "txt", "jpg":
+	case "models", "txt", "jpg", "weather", "mapping":
 		// 直接保存文件
 		savePath := filepath.Join(baseUploadDir, file.Filename)
 		if err := c.SaveUploadedFile(file, savePath); err != nil {

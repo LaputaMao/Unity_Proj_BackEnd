@@ -22,8 +22,9 @@ func NewHistoryTrailHandler(store *store.HistoryTrailStore) *HistoryTrailHandler
 func (h *HistoryTrailHandler) CreateTrail(c *gin.Context) {
 	// 从表单获取岛屿名
 	isleName := c.PostForm("isle_name")
-	if isleName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "isle_name 不能为空"})
+	category := c.PostForm("category")
+	if isleName == "" || category == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "isle_name 和 category 不能为空"})
 		return
 	}
 
@@ -34,8 +35,10 @@ func (h *HistoryTrailHandler) CreateTrail(c *gin.Context) {
 		return
 	}
 
-	// 定义存储路径：uploads/trails/岛屿名/
-	uploadDir := filepath.Join("uploads", "trails", isleName)
+	// 存储路径可以根据 category 再做一层隔离，更清晰
+	// 例如：uploads/trails/岛屿名/history_trail/
+	// 或   uploads/trails/岛屿名/annotation/
+	uploadDir := filepath.Join("uploads", "trails", isleName, category)
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建存储目录失败: " + err.Error()})
 		return
@@ -53,6 +56,7 @@ func (h *HistoryTrailHandler) CreateTrail(c *gin.Context) {
 		IsleName:  isleName,
 		TrailName: file.Filename,
 		TrailPath: savePath,
+		Category:  category,
 	}
 
 	if err := h.store.Create(&trail); err != nil {
@@ -62,21 +66,22 @@ func (h *HistoryTrailHandler) CreateTrail(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "历史轨迹上传成功", "data": trail})
+	c.JSON(http.StatusOK, gin.H{"message": "文件上传成功", "data": trail})
 }
 
 // 2. 根据岛屿名分页查询轨迹列表
 func (h *HistoryTrailHandler) GetTrailsByIsleName(c *gin.Context) {
 	isleName := c.Query("isle_name")
-	if isleName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "必须提供 isle_name 参数"})
+	category := c.Query("category")
+	if isleName == "" || category == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "必须提供 isle_name 和 category 参数"})
 		return
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	trails, total, err := h.store.GetByIsleName(isleName, page, pageSize)
+	trails, total, err := h.store.GetByIsleName(isleName, category, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询轨迹列表失败: " + err.Error()})
 		return
