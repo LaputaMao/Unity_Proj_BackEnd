@@ -44,18 +44,26 @@ type RasterEntry struct {
 	Height float64 `json:"height"`
 }
 
+// CameraSetting 相机设置结构体
+type CameraSetting struct {
+	MoveSpeed   float64 `json:"moveSpeed"`
+	RotateSpeed float64 `json:"rotateSpeed"`
+	ScaleSpeed  float64 `json:"scaleSpeed"`
+}
+
 // ExportedJSON 是最终生成的 JSON 的根结构
 type ExportedJSON struct {
-	ProjectName  string        `json:"projectName"`
-	CesiumOrigin LatLon        `json:"cesiumOrigin"`
-	PlayPosition LatLonHeight  `json:"playPosition"`
-	Vectors      []VectorEntry `json:"vectors"`
-	Rasters      []RasterEntry `json:"rasters"`
-	Models       []FileEntry   `json:"models"`
-	Pictures     []FileEntry   `json:"pictures"`
-	Text         []FileEntry   `json:"text"`
-	Weather      []FileEntry   `json:"weather"`
-	Mapping      []FileEntry   `json:"mapping"`
+	ProjectName   string        `json:"projectName"`
+	CesiumOrigin  LatLon        `json:"cesiumOrigin"`
+	PlayPosition  LatLonHeight  `json:"playPosition"`
+	CameraSetting CameraSetting `json:"cameraSetting"`
+	Vectors       []VectorEntry `json:"vectors"`
+	Rasters       []RasterEntry `json:"rasters"`
+	Models        []FileEntry   `json:"models"`
+	Pictures      []FileEntry   `json:"pictures"`
+	// Text         []FileEntry   `json:"text"`
+	WeatherFilePath []FileEntry `json:"weatherFilePath"`
+	CsvFilePath     []FileEntry `json:"csvFilePath"`
 }
 
 // ExportHandler 负责处理导出逻辑
@@ -105,14 +113,19 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 			Lon:    island.CameraX,
 			Height: island.CameraZ,
 		},
+		CameraSetting: CameraSetting{
+			MoveSpeed:   island.MoveSpeed,
+			RotateSpeed: island.RotateSpeed,
+			ScaleSpeed:  island.ScaleSpeed,
+		},
 		// 初始化空的 slice，这样即使没有数据，JSON里也会是 [] 而不是 null
 		Vectors:  []VectorEntry{},
 		Rasters:  []RasterEntry{},
 		Models:   []FileEntry{},
 		Pictures: []FileEntry{},
-		Text:     []FileEntry{},
-		Weather:  []FileEntry{},
-		Mapping:  []FileEntry{},
+		//Text:     []FileEntry{},
+		WeatherFilePath: []FileEntry{},
+		CsvFilePath:     []FileEntry{},
 	}
 
 	// 5. 遍历文件，分类填充到 result 中
@@ -141,20 +154,20 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 				Name: file.DataName,
 				Path: file.DataPath, // 直接使用数据库中的路径
 			})
-		case "txt":
-			result.Text = append(result.Text, FileEntry{
-				Name: file.DataName,
-				Path: file.DataPath, // 直接使用数据库中的路径
-			})
+		//case "txt":
+		//	result.Text = append(result.Text, FileEntry{
+		//		Name: file.DataName,
+		//		Path: file.DataPath, // 直接使用数据库中的路径
+		//	})
 		case "weather":
-			result.Weather = append(result.Weather, FileEntry{
+			result.WeatherFilePath = append(result.WeatherFilePath, FileEntry{
 				Name: file.DataName,
-				Path: file.DataPath, // 按要求使用相对路径
+				Path: file.DataPath,
 			})
 		case "mapping":
-			result.Mapping = append(result.Mapping, FileEntry{
+			result.CsvFilePath = append(result.CsvFilePath, FileEntry{
 				Name: file.DataName,
-				Path: file.DataPath, // 按要求使用相对路径
+				Path: file.DataPath,
 			})
 		}
 	}

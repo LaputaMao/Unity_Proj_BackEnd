@@ -34,7 +34,9 @@ func (h *IslandHandler) CreateIsland(c *gin.Context) {
 	cameraZ, _ := strconv.ParseFloat(c.PostForm("camera_z"), 64)
 	archipelagoName := c.PostForm("archipelago_name")
 	country := c.PostForm("country")
-
+	moveSpeed, _ := strconv.ParseFloat(c.DefaultPostForm("moveSpeed", "0.7"), 64)
+	rotateSpeed, _ := strconv.ParseFloat(c.DefaultPostForm("rotateSpeed", "0.5"), 64)
+	scaleSpeed, _ := strconv.ParseFloat(c.DefaultPostForm("scaleSpeed", "1.0"), 64)
 	// 处理文件上传
 	file, err := c.FormFile("isle_pic")
 	if err != nil {
@@ -69,6 +71,9 @@ func (h *IslandHandler) CreateIsland(c *gin.Context) {
 		IslePicPath:     picPath, // 存储相对路径
 		ArchipelagoName: archipelagoName,
 		Country:         country,
+		MoveSpeed:       moveSpeed,
+		RotateSpeed:     rotateSpeed,
+		ScaleSpeed:      scaleSpeed,
 	}
 
 	// 保存到数据库
@@ -184,6 +189,9 @@ func (h *IslandHandler) UpdateIsland(c *gin.Context) {
 		CameraZ         *float64 `json:"camera_z"`
 		ArchipelagoName *string  `json:"archipelago_name"`
 		Country         *string  `json:"country"`
+		MoveSpeed       *float64 `json:"moveSpeed"`
+		RotateSpeed     *float64 `json:"rotateSpeed"`
+		ScaleSpeed      *float64 `json:"scaleSpeed"`
 	}
 
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -216,6 +224,15 @@ func (h *IslandHandler) UpdateIsland(c *gin.Context) {
 	}
 	if updateData.Country != nil {
 		island.Country = *updateData.Country
+	}
+	if updateData.MoveSpeed != nil {
+		island.MoveSpeed = *updateData.MoveSpeed
+	}
+	if updateData.RotateSpeed != nil {
+		island.RotateSpeed = *updateData.RotateSpeed
+	}
+	if updateData.ScaleSpeed != nil {
+		island.ScaleSpeed = *updateData.ScaleSpeed
 	}
 
 	// 保存回数据库
