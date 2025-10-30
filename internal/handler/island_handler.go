@@ -5,6 +5,7 @@ import (
 	"Go_for_unity/internal/store"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -164,7 +165,9 @@ func (h *IslandHandler) DeleteIsland(c *gin.Context) {
 }
 
 // UpdateIsland 4. 修改岛屿信息接口
+// 4. 修改岛屿信息接口 (修改后，支持 multipart/form-data)
 func (h *IslandHandler) UpdateIsland(c *gin.Context) {
+	// 1. 获取 ID 并从数据库查找现有岛屿
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -172,74 +175,99 @@ func (h *IslandHandler) UpdateIsland(c *gin.Context) {
 		return
 	}
 
-	// 查找现有岛屿
 	island, err := h.store.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "岛屿不存在"})
 		return
 	}
 
-	// 绑定 JSON 数据到临时结构体
-	var updateData struct {
-		IsleDesc        *string  `json:"isle_desc"`
-		CenterX         *float64 `json:"center_x"`
-		CenterY         *float64 `json:"center_y"`
-		CameraX         *float64 `json:"camera_x"`
-		CameraY         *float64 `json:"camera_y"`
-		CameraZ         *float64 `json:"camera_z"`
-		ArchipelagoName *string  `json:"archipelago_name"`
-		Country         *string  `json:"country"`
-		MoveSpeed       *float64 `json:"moveSpeed"`
-		RotateSpeed     *float64 `json:"rotateSpeed"`
-		ScaleSpeed      *float64 `json:"scaleSpeed"`
+	// 2. 从 form-data 中解析并更新文本/数字字段
+	// 我们使用 GetPostForm 来判断字段是否存在，如果存在才更新
+	// 字符串类型使用 c.PostForm()。如果字段不存在或值为空，它都会返回空字符串。
+	if isleDesc := c.PostForm("isle_desc"); isleDesc != "" {
+		island.IsleDesc = isleDesc
+	}
+	if centerXStr, ok := c.GetPostForm("center_x"); ok {
+		if val, err := strconv.ParseFloat(centerXStr, 64); err == nil {
+			island.CenterX = val
+		}
+	}
+	if centerYStr, ok := c.GetPostForm("center_y"); ok {
+		if val, err := strconv.ParseFloat(centerYStr, 64); err == nil {
+			island.CenterY = val
+		}
+	}
+	// ... 以此类推，更新所有可修改的字段
+	if cameraXStr, ok := c.GetPostForm("camera_x"); ok {
+		if val, err := strconv.ParseFloat(cameraXStr, 64); err == nil {
+			island.CameraX = val
+		}
+	}
+	if cameraYStr, ok := c.GetPostForm("camera_y"); ok {
+		if val, err := strconv.ParseFloat(cameraYStr, 64); err == nil {
+			island.CameraY = val
+		}
+	}
+	if cameraZStr, ok := c.GetPostForm("camera_z"); ok {
+		if val, err := strconv.ParseFloat(cameraZStr, 64); err == nil {
+			island.CameraZ = val
+		}
+	}
+	if archipelagoName := c.PostForm("archipelago_name"); archipelagoName != "" {
+		island.ArchipelagoName = archipelagoName
+	}
+	if country := c.PostForm("country"); country != "" {
+		island.Country = country
+	}
+	if rotateSpeedStr, ok := c.GetPostForm("rotateSpeed"); ok {
+		if val, err := strconv.ParseFloat(rotateSpeedStr, 64); err == nil {
+			island.RotateSpeed = val
+		}
+	}
+	if scaleSpeedStr, ok := c.GetPostForm("scaleSpeed"); ok {
+		if val, err := strconv.ParseFloat(scaleSpeedStr, 64); err == nil {
+			island.ScaleSpeed = val
+		}
 	}
 
-	if err := c.ShouldBindJSON(&updateData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据: " + err.Error()})
-		return
+	// 3. 处理可选的图片文件上传
+	newFile, err := c.FormFile("isle_pic") // 假设前端上传的文件字段名为 "isle_pic"
+	if err == nil {
+		// 如果 err 为 nil，说明用户上传了新图片
+		log.Println("检测到新图片上传，开始处理...")
+
+		// 3a. 删除旧图片（如果存在）
+		if island.IslePicPath != "" {
+			if removeErr := os.Remove(island.IslePicPath); removeErr != nil {
+				// 即使删除失败，也只记录日志，不中断主流程
+				log.Printf("删除旧图片失败: %s, 错误: %v", island.IslePicPath, removeErr)
+			} else {
+				log.Printf("成功删除旧图片: %s", island.IslePicPath)
+			}
+		}
+
+		// 3b. 保存新图片
+		// 使用从数据库读出的 belong_to 和 isle_name 来构建路径，确保路径正确
+		uploadDir := filepath.Join("uploads", island.BelongTo, island.IsleName)
+		os.MkdirAll(uploadDir, 0755) // 确保目录存在
+		newPicPath := filepath.Join(uploadDir, newFile.Filename)
+
+		if saveErr := c.SaveUploadedFile(newFile, newPicPath); saveErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存新图片失败: " + saveErr.Error()})
+			return
+		}
+		log.Printf("成功保存新图片到: %s", newPicPath)
+
+		// 3c. 更新数据库中的图片路径字段
+		island.IslePicPath = newPicPath
 	}
 
-	// 更新字段 (只更新传入的字段)
-	if updateData.IsleDesc != nil {
-		island.IsleDesc = *updateData.IsleDesc
-	}
-	if updateData.CenterX != nil {
-		island.CenterX = *updateData.CenterX
-	}
-	// ... 以此类推，更新其他字段
-	if updateData.CenterY != nil {
-		island.CenterY = *updateData.CenterY
-	}
-	if updateData.CameraX != nil {
-		island.CameraX = *updateData.CameraX
-	}
-	if updateData.CameraY != nil {
-		island.CameraY = *updateData.CameraY
-	}
-	if updateData.CameraZ != nil {
-		island.CameraZ = *updateData.CameraZ
-	}
-	if updateData.ArchipelagoName != nil {
-		island.ArchipelagoName = *updateData.ArchipelagoName
-	}
-	if updateData.Country != nil {
-		island.Country = *updateData.Country
-	}
-	if updateData.MoveSpeed != nil {
-		island.MoveSpeed = *updateData.MoveSpeed
-	}
-	if updateData.RotateSpeed != nil {
-		island.RotateSpeed = *updateData.RotateSpeed
-	}
-	if updateData.ScaleSpeed != nil {
-		island.ScaleSpeed = *updateData.ScaleSpeed
-	}
-
-	// 保存回数据库
+	// 4. 将所有更改保存到数据库
 	if err := h.store.Update(island); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新数据库失败: " + err.Error()})
 		return
 	}
 
+	// 5. 返回成功响应
 	c.JSON(http.StatusOK, gin.H{"message": "岛屿信息更新成功", "data": island})
 }
