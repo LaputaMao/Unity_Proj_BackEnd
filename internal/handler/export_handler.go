@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // --- 定义与最终 JSON 结构对应的 Go Struct ---
@@ -128,8 +129,11 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 		CsvFilePath:     []FileEntry{},
 	}
 
+	const targetHost = "10.7.7.2:9090"
+	const testHost = "localhost:9090"
 	// 5. 遍历文件，分类填充到 result 中
 	for _, file := range files {
+		fileURLPath := toStandardURLPath(testHost, file.DataPath)
 		switch file.DataType {
 		case "shp":
 			result.Vectors = append(result.Vectors, VectorEntry{
@@ -141,7 +145,7 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 			result.Rasters = append(result.Rasters, RasterEntry{
 				Name: file.DataName,
 				// 将路径转换为静态服务 URL
-				Path:   fmt.Sprintf("http://%s/%s", c.Request.Host, file.DataPath),
+				Path:   fileURLPath, // 使用标准化 URL 路径
 				Height: file.Height,
 			})
 		case "models":
@@ -180,4 +184,16 @@ func (h *ExportHandler) ExportIslandJSON(c *gin.Context) {
 
 	// 7. 返回 HTTP 响应给前端
 	c.JSON(http.StatusOK, result)
+}
+
+// 辅助函数：将 Windows 路径标准化为 URL 路径，并拼接上目标 Host
+// targetHost: "10.7.7.2:9090"
+// filePath: "uploads\\user\\测试岛1\\tif\\tileset\\tileset.json"
+// 返回值: "http://10.7.7.2:9090/uploads/user/测试岛1/tif/tileset/tileset.json"
+func toStandardURLPath(targetHost string, filePath string) string {
+	// 1. 将 Windows 反斜杠替换为 URL 正斜杠
+	standardPath := strings.ReplaceAll(filePath, "\\", "/")
+
+	// 2. 拼接为完整的 HTTP URL
+	return fmt.Sprintf("http://%s/%s", targetHost, standardPath)
 }

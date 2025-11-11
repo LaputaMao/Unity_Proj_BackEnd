@@ -55,7 +55,7 @@ func (h *DataFileHandler) UploadDataFile(c *gin.Context) {
 
 	// --- 3. 根据文件类型分别处理 ---
 	switch dataType {
-	case "shp", "tif":
+	case "shp":
 		// 解压zip文件
 		zipPath := filepath.Join(baseUploadDir, file.Filename)
 		if err := c.SaveUploadedFile(file, zipPath); err != nil {
@@ -75,6 +75,32 @@ func (h *DataFileHandler) UploadDataFile(c *gin.Context) {
 		foundPath, err := findFileByExt(unzipDest, targetExt)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("在压缩包中未找到 %s 文件", targetExt)})
+			return
+		}
+		finalFilePath = foundPath
+	case "tif":
+		// 1. 保存并解压 zip 文件
+		zipPath := filepath.Join(baseUploadDir, file.Filename)
+		if err := c.SaveUploadedFile(file, zipPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存zip文件失败"})
+			return
+		}
+		// 解压到与 zip 同名的文件夹
+		unzipDest := strings.TrimSuffix(zipPath, filepath.Ext(zipPath))
+		if err := unzip(zipPath, unzipDest); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "解压文件失败: " + err.Error()})
+			return
+		}
+		os.Remove(zipPath) // 删除临时的zip包
+
+		// 2. 获取 zip 文件的基本名称 (例如 "MyTiles" from "MyTiles.zip")
+		baseName := strings.TrimSuffix(file.Filename, filepath.Ext(file.Filename))
+
+		// 3. 使用新的辅助函数查找索引文件 (.xml 或 .json)
+		foundPath, err := findRasterIndexFile(unzipDest, baseName)
+		if err != nil {
+			// 如果找不到，给前端返回明确的错误信息
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		finalFilePath = foundPath
@@ -117,7 +143,7 @@ func (h *DataFileHandler) GetDataFilesByIsle(c *gin.Context) {
 	isleID, _ := strconv.ParseUint(isleIDStr, 10, 64)
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "999"))
 
 	files, total, err := h.dfStore.GetByIsleID(uint(isleID), page, pageSize)
 	if err != nil {
@@ -253,4 +279,25 @@ func findFileByExt(rootDir, ext string) (string, error) {
 		return "", fmt.Errorf("no file with extension %s found", ext)
 	}
 	return foundPath, nil
+}
+
+// findRasterIndexFile 在解压目录中查找影像或道路模型的索引文件 (.xml 或 .json)
+// 它要求索引文件名必须与原始 zip 包的文件名（不含后缀）相同。
+func findRasterIndexFile(unzipDest, baseName string) (string, error) {
+	// 1. 尝试查找 .xml 文件
+	xmlPath := filepath.Join(unzipDest, baseName+".xml")
+	if _, err := os.Stat(xmlPath); err == nil {
+		// 文件存在，返回路径
+		return xmlPath, nil
+	}
+
+	// 2. 如果 .xml 不存在，尝试查找 .json 文件
+	jsonPath := filepath.Join(unzipDest, baseName+".json")
+	if _, err := os.Stat(jsonPath); err == nil {
+		// 文件存在，返回路径
+		return jsonPath, nil
+	}
+
+	// 3. 如果两者都不存在，返回错误
+	return "", fmt.Errorf("在压缩包中未找到索引文件 %s.xml 或 %s.json", baseName, baseName)
 }

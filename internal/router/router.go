@@ -55,6 +55,8 @@ func Setup(engine *gin.Engine, islandHandler *handler.IslandHandler, dataFileHan
 			trailGroup.GET("", historyTrailHandler.GetTrailsByIsleName)
 			// GET /api/v1/trails/:id/file - 下载指定ID的轨迹文件
 			trailGroup.GET("/:id/file", historyTrailHandler.GetTrailFile)
+			// DELETE /api/v1/trails/:id - 删除轨迹/标注
+			trailGroup.DELETE("/:id", historyTrailHandler.DeleteTrail)
 		}
 	}
 }
