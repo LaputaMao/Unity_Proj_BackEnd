@@ -9,6 +9,13 @@ type HistoryTrailStore struct {
 	db *gorm.DB
 }
 
+// TrailCountResult 用于接收聚合查询结果的临时结构
+type TrailCountResult struct {
+	IsleName string
+	Category string
+	Total    int64
+}
+
 func NewHistoryTrailStore(db *gorm.DB) *HistoryTrailStore {
 	return &HistoryTrailStore{db: db}
 }
@@ -59,4 +66,15 @@ func (s *HistoryTrailStore) GetByID(id uint) (*model.HistoryTrail, error) {
 // Delete 根据 ID 删除一条记录 (硬删除)
 func (s *HistoryTrailStore) Delete(id uint) error {
 	return s.db.Unscoped().Delete(&model.HistoryTrail{}, id).Error
+}
+
+// GetGlobalCounts 获取全局的轨迹统计信息
+func (s *HistoryTrailStore) GetGlobalCounts() ([]TrailCountResult, error) {
+	var results []TrailCountResult
+	// SQL: SELECT isle_name, category, count(*) as total FROM history_trails WHERE deleted_at IS NULL GROUP BY isle_name, category
+	err := s.db.Model(&model.HistoryTrail{}).
+		Select("isle_name, category, count(*) as total").
+		Group("isle_name, category").
+		Scan(&results).Error
+	return results, err
 }

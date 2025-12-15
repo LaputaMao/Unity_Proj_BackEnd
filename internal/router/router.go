@@ -5,7 +5,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(engine *gin.Engine, islandHandler *handler.IslandHandler, dataFileHandler *handler.DataFileHandler, exportHandler *handler.ExportHandler, wsHandler *handler.WebsocketHandler, historyTrailHandler *handler.HistoryTrailHandler) {
+func Setup(engine *gin.Engine,
+	islandHandler *handler.IslandHandler,
+	dataFileHandler *handler.DataFileHandler,
+	exportHandler *handler.ExportHandler,
+	wsHandler *handler.WebsocketHandler,
+	historyTrailHandler *handler.HistoryTrailHandler,
+	logHandler *handler.LogHandler) {
 	// 设置静态文件服务，用于访问上传的图片
 	// 前端访问 http://localhost:8080/uploads/xxx.jpg 就会映射到 ./uploads/xxx.jpg 文件
 	engine.Static("/uploads", "./uploads")
@@ -58,5 +64,9 @@ func Setup(engine *gin.Engine, islandHandler *handler.IslandHandler, dataFileHan
 			// DELETE /api/v1/trails/:id - 删除轨迹/标注
 			trailGroup.DELETE("/:id", historyTrailHandler.DeleteTrail)
 		}
+
+		// 新增日志接口
+		// GET /api/v1/logs
+		apiV1.GET("/logs", logHandler.GetSystemLog)
 	}
 }

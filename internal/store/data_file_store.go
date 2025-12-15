@@ -9,6 +9,13 @@ type DataFileStore struct {
 	db *gorm.DB
 }
 
+// DataFileCountResult 用于接收聚合查询结果的临时结构
+type DataFileCountResult struct {
+	IsleID   uint
+	DataType string
+	Total    int64
+}
+
 func NewDataFileStore(db *gorm.DB) *DataFileStore {
 	return &DataFileStore{db: db}
 }
@@ -61,4 +68,15 @@ func (s *DataFileStore) GetAllByIsleID(isleID uint) ([]model.DataFile, error) {
 	var files []model.DataFile
 	err := s.db.Where("isle_id = ?", isleID).Find(&files).Error
 	return files, err
+}
+
+// GetGlobalCounts 获取全局的文件统计信息
+func (s *DataFileStore) GetGlobalCounts() ([]DataFileCountResult, error) {
+	var results []DataFileCountResult
+	// SQL: SELECT isle_id, data_type, count(*) as total FROM data_files WHERE deleted_at IS NULL GROUP BY isle_id, data_type
+	err := s.db.Model(&model.DataFile{}).
+		Select("isle_id, data_type, count(*) as total").
+		Group("isle_id, data_type").
+		Scan(&results).Error
+	return results, err
 }

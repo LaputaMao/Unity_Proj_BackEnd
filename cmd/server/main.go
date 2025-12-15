@@ -54,13 +54,14 @@ func main() {
 	exportHandler := handler.NewExportHandler(islandStore, dataFileStore, wsManager)
 	wsHandler := handler.NewWebsocketHandler(wsManager) // 创建 WebSocket 处理器
 	historyTrailHandler := handler.NewHistoryTrailHandler(historyTrailStore)
+	logHandler := handler.NewLogHandler(islandStore, dataFileStore, historyTrailStore)
 	// 5. 初始化 Gin 引擎
 	r := gin.Default()
 	// 增加 Body 大小限制，防止上传大文件时出错
 	r.MaxMultipartMemory = 2 << 30 // 2 GB
 
 	// 6. 设置路由
-	router.Setup(r, islandHandler, dataFileHandler, exportHandler, wsHandler, historyTrailHandler)
+	router.Setup(r, islandHandler, dataFileHandler, exportHandler, wsHandler, historyTrailHandler, logHandler)
 
 	// 7. 启动服务器
 	// All the Go project developed by LaputaMao will listen on port 9090 , just because 9090 like 'gogo' hhh.

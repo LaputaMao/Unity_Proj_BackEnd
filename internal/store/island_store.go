@@ -83,3 +83,11 @@ func (s *IslandStore) Delete(id uint) error {
 	// 在 Delete 前调用 Unscoped()来实现硬删除
 	return s.db.Unscoped().Delete(&model.Island{}, id).Error
 }
+
+// GetAll 获取所有岛屿列表 (不分页，用于日志统计)
+func (s *IslandStore) GetAll() ([]model.Island, error) {
+	var islands []model.Island
+	// 只查询需要的字段，减少传输数据量
+	err := s.db.Select("id, isle_name, isle_desc, belong_to, created_at, updated_at").Find(&islands).Error
+	return islands, err
+}
