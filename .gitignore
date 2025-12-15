@@ -1,5 +1,15 @@
 /uploads/
+/D3D12/
+/GISVis3D_BurstDebugInformation_DoNotShip/
+/GISVis3D_Data/
+/MonoBleedingEdge/
 
 unity_Go_backend.exe
+unity_backend_3307.exe
+unity_backend_new.exe
+UnityCrashHandler64.exe
+GISVis3D.exe
 
 GisVis3D_10291.zip
+
+UnityPlayer.dll
